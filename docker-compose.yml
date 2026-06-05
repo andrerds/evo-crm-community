@@ -100,8 +100,8 @@ services:
       dockerfile: docker/Dockerfile
       args:
         BUNDLE_WITHOUT: ""
-        RAILS_ENV: development
-        RAILS_SERVE_STATIC_FILES: "false"
+        RAILS_ENV: production
+        RAILS_SERVE_STATIC_FILES: "true"
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -115,14 +115,6 @@ services:
       BOT_RUNTIME_URL: http://evo-bot-runtime:8080
       BOT_RUNTIME_SECRET: ${BOT_RUNTIME_SECRET:-evo-bot-runtime-dev-secret}
       BOT_RUNTIME_POSTBACK_BASE_URL: http://evo-crm:3000
-    volumes:
-      - ./evo-ai-crm-community:/app:delegated
-      - crm_bundle:/usr/local/bundle
-      - crm_node_modules:/app/node_modules
-      - crm_cache:/app/tmp/cache
-      # /app/storage is already shared between evo-crm and evo-crm-sidekiq through
-      # the project bind above — no additional named volume needed (a named volume
-      # here would mask the bind and break host visibility of ActiveStorage blobs).
     depends_on:
       postgres:
         condition: service_healthy
@@ -145,8 +137,8 @@ services:
       dockerfile: docker/Dockerfile
       args:
         BUNDLE_WITHOUT: ""
-        RAILS_ENV: development
-        RAILS_SERVE_STATIC_FILES: "false"
+        RAILS_ENV: production
+        RAILS_SERVE_STATIC_FILES: "true"
     restart: unless-stopped
     env_file: .env
     environment:
@@ -158,13 +150,6 @@ services:
       BOT_RUNTIME_URL: http://evo-bot-runtime:8080
       BOT_RUNTIME_SECRET: ${BOT_RUNTIME_SECRET:-evo-bot-runtime-dev-secret}
       BOT_RUNTIME_POSTBACK_BASE_URL: http://evo-crm:3000
-    volumes:
-      - ./evo-ai-crm-community:/app:delegated
-      - crm_bundle:/usr/local/bundle
-      - crm_node_modules:/app/node_modules
-      - crm_cache:/app/tmp/cache
-      # See evo-crm above — /app/storage is shared via the project bind, no named
-      # volume needed (and one here would mask the bind, hiding blobs from host).
     depends_on:
       postgres:
         condition: service_healthy
@@ -307,7 +292,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  crm_bundle:
-  crm_node_modules:
-  crm_cache:
   processor_logs:
