@@ -14,3 +14,5 @@ evolution-hub
 evo-ai-docs/
 evo-flow/
 evo-crm-enterprise/
+.env-coolify
+server.connection.sh
