@@ -214,6 +214,13 @@ services:
       PORT: "8000"
       EVO_AI_CRM_URL: http://evo-crm:3000
       CORE_SERVICE_URL: http://evo-core:5555/api/v1
+    # Restart-safe boot: alembic migrations aren't idempotent (alembic_version
+    # ends up empty while tables exist, so a re-run hits DuplicateTable). On an
+    # already-migrated DB, fall back to stamping head; seeders are best-effort.
+    command:
+      - sh
+      - -c
+      - "alembic upgrade head || alembic stamp head; python -m scripts.run_seeders || true; exec uvicorn src.main:app --host 0.0.0.0 --port 8000"
     volumes:
       - processor_logs:/app/logs
     depends_on:
