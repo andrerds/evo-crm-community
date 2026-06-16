@@ -1,0 +1,59 @@
+name: Sync submodules from upstream
+
+# Daily sync of every submodule pointer to its upstream HEAD (origin = evolution-foundation).
+# Opens a PR against the branch this workflow lives on so you can review the bump before deploy.
+# Coolify webhook (auto-deploy on push) takes over once the PR is merged.
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # 06:00 UTC every day
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          token: ${{ secrets.GH_PAT_REPO }}
+
+      - name: Configure git
+        run: |
+          git config user.name 'evo-crm-sync-bot'
+          git config user.email 'sync-bot@users.noreply.github.com'
+
+      - name: Update each submodule to its upstream HEAD
+        run: |
+          git submodule foreach --recursive '
+            branch=$(git config -f $toplevel/.gitmodules --get submodule.$name.branch || echo main)
+            echo "[$name] tracking $branch"
+            git fetch origin "$branch"
+            git checkout "$branch" 2>/dev/null || git checkout -B "$branch" "origin/$branch"
+            git pull --ff-only origin "$branch"
+          '
+
+      - name: Open PR if anything changed
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GH_PAT_REPO }}
+          branch: bot/sync-from-upstream
+          delete-branch: true
+          title: 'chore(submodules): sync pointers from upstream'
+          commit-message: 'chore(submodules): bump pointers from upstream'
+          body: |
+            Automated bump of submodule pointers to the current `origin/<branch>` of each upstream repo.
+
+            **What this PR does**: moves the SHA each submodule points to up to the latest upstream commit. Does **not** touch `.gitmodules` URLs — submodules whose URL points at `andrerds/*` keep that fork; submodules pointing at `evolution-foundation/*` continue to do so.
+
+            **Review checklist**:
+            - [ ] Submodules pointing at `andrerds/*` forks: confirm the new SHA exists on the fork (rebase your `fix/*` branches first if not).
+            - [ ] No deploy-breaking change in any submodule changelog.
+            - [ ] CI green.
+
+            Merge to trigger Coolify auto-deploy.
